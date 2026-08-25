@@ -25,6 +25,7 @@ from qgis.PyQt.QtCore import QSettings, QTranslator, qVersion, QCoreApplication,
 from qgis.PyQt.QtGui import QAction, QIcon
 from qgis.PyQt.QtWidgets import QFileDialog
 from qgis.core import *
+import re
 # Initialize Qt resources from file resources.py
 # import resources
 
@@ -290,9 +291,16 @@ class RailML:
             self.dockwidget.buttonLoadPoints.setEnabled(False)
         #Automatically detect EPSG code from first element
         coordtag=elements[1].find((".//%s"+geoCoord) %railns)
+
         epsg=str(coordtag.get(epsgCode))
-        if epsg=="None":
+        # https://wiki2.railml.org/wiki/IS:geoCoord
+        # epsg code contains urn reference part. naively using that can cause QGis not to recognize epsg
+        # for now, extract trailing number.
+        # regex to extract number 
+        epsg = re.search(r"(\d+)$", epsg)
+        if epsg is None:
             epsg="4326" # Fallback
+        epsg = epsg.group()
     
     def load_Points(self):
         """Loads Points as temporary Layer into QGIS.
@@ -317,7 +325,7 @@ class RailML:
         pointLayer.updateFields()   # Update in order to enable id field
         
         i=0
-        tree = ET.parse(railmlpath)
+        tree = ET.parse(railmlpath[0])
         root = tree.getroot()
         
         for element in elements:
@@ -341,9 +349,7 @@ class RailML:
         railmlpath = QFileDialog.getOpenFileName(self.dockwidget, "Select RailML file","", "RailML files (*.railml *.xml)")
         if railmlpath != "":
             self.dockwidget.labelFilename.clear()
-            print(railmlpath)
             railmlname=QDir(railmlpath[0]).dirName()
-            print(railmlname)
             self.dockwidget.labelFilename.setText(railmlname)
             self.parse_railml()
 
