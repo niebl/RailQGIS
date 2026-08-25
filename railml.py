@@ -4,11 +4,12 @@
  RailML
                                  A QGIS plugin
  Import/Export functions for RailML format
+ Forked and maintained by https://github.com/niebl
                               -------------------
         begin                : 2017-08-01
         git sha              : $Format:%H$
         copyright            : (C) 2017 by Johannes Ludwig
-        email                : ludwigjohannes@ymail.com
+        email                : caro.niebl@uni-muenster.de
  ***************************************************************************/
 
 /***************************************************************************
@@ -20,14 +21,16 @@
  *                                                                         *
  ***************************************************************************/
 """
-from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, Qt, QDir, QVariant
-from PyQt4.QtGui import QAction, QIcon, QFileDialog
+from qgis.PyQt.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, Qt, QDir, QVariant
+from qgis.PyQt.QtGui import QAction, QIcon
+from qgis.PyQt.QtWidgets import QFileDialog
 from qgis.core import *
+import re
 # Initialize Qt resources from file resources.py
-import resources
+# import resources
 
 # Import the code for the DockWidget
-from railml_dockwidget import RailMLDockWidget
+from .railml_dockwidget import RailMLDockWidget
 import os.path
 
 # Import the ElementTree XML API
@@ -259,6 +262,7 @@ class RailML:
     def parse_railml(self):
         """Load and analyse the railml structure
         """
+        # TODO: distinguish between specification versions
         global geoCoord
         global ns
         global railnsURI
@@ -272,7 +276,7 @@ class RailML:
         self.dockwidget.labelCoordCount.clear()
         self.dockwidget.labelCoordCount.setText("searching ...")
         
-        tree = ET.parse(railmlpath)
+        tree = ET.parse(railmlpath[0])
         root = tree.getroot()
         railnsURI=root.tag.split('}')[0].strip('{')
         self.updateNs()
@@ -287,9 +291,16 @@ class RailML:
             self.dockwidget.buttonLoadPoints.setEnabled(False)
         #Automatically detect EPSG code from first element
         coordtag=elements[1].find((".//%s"+geoCoord) %railns)
+
         epsg=str(coordtag.get(epsgCode))
-        if epsg=="None":
+        # https://wiki2.railml.org/wiki/IS:geoCoord
+        # epsg code contains urn reference part. naively using that can cause QGis not to recognize epsg
+        # for now, extract trailing number.
+        # regex to extract number 
+        epsg = re.search(r"(\d+)$", epsg)
+        if epsg is None:
             epsg="4326" # Fallback
+        epsg = epsg.group()
     
     def load_Points(self):
         """Loads Points as temporary Layer into QGIS.
@@ -314,7 +325,7 @@ class RailML:
         pointLayer.updateFields()   # Update in order to enable id field
         
         i=0
-        tree = ET.parse(railmlpath)
+        tree = ET.parse(railmlpath[0])
         root = tree.getroot()
         
         for element in elements:
@@ -338,7 +349,7 @@ class RailML:
         railmlpath = QFileDialog.getOpenFileName(self.dockwidget, "Select RailML file","", "RailML files (*.railml *.xml)")
         if railmlpath != "":
             self.dockwidget.labelFilename.clear()
-            railmlname=QDir(railmlpath).dirName()
+            railmlname=QDir(railmlpath[0]).dirName()
             self.dockwidget.labelFilename.setText(railmlname)
             self.parse_railml()
 
@@ -363,7 +374,7 @@ class RailML:
 
             # show the dockwidget
             # TODO: fix to allow choice of dock location
-            self.iface.addDockWidget(Qt.RightDockWidgetArea, self.dockwidget)
+            self.iface.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dockwidget)
             self.dockwidget.show()
             
             global railmlpath
