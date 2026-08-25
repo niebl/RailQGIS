@@ -14,7 +14,7 @@ __copyright__ = 'Copyright 2017, Johannes Ludwig'
 
 import unittest
 
-from PyQt4.QtGui import QDockWidget
+from qgis.PyQt.QtGui import QDockWidget
 
 from railml_dockwidget import RailMLDockWidget
 

@@ -4,11 +4,12 @@
  RailML
                                  A QGIS plugin
  Import/Export functions for RailML format
+ Forked and maintained by https://github.com/niebl
                               -------------------
         begin                : 2017-08-01
         git sha              : $Format:%H$
         copyright            : (C) 2017 by Johannes Ludwig
-        email                : ludwigjohannes@ymail.com
+        email                : caro.niebl@uni-muenster.de
  ***************************************************************************/
 
 /***************************************************************************
@@ -20,14 +21,15 @@
  *                                                                         *
  ***************************************************************************/
 """
-from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, Qt, QDir, QVariant
-from PyQt4.QtGui import QAction, QIcon, QFileDialog
+from qgis.PyQt.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, Qt, QDir, QVariant
+from qgis.PyQt.QtGui import QAction, QIcon
+from qgis.PyQt.QtWidgets import QFileDialog
 from qgis.core import *
 # Initialize Qt resources from file resources.py
-import resources
+# import resources
 
 # Import the code for the DockWidget
-from railml_dockwidget import RailMLDockWidget
+from .railml_dockwidget import RailMLDockWidget
 import os.path
 
 # Import the ElementTree XML API
@@ -259,6 +261,7 @@ class RailML:
     def parse_railml(self):
         """Load and analyse the railml structure
         """
+        # TODO: distinguish between specification versions
         global geoCoord
         global ns
         global railnsURI
@@ -272,7 +275,7 @@ class RailML:
         self.dockwidget.labelCoordCount.clear()
         self.dockwidget.labelCoordCount.setText("searching ...")
         
-        tree = ET.parse(railmlpath)
+        tree = ET.parse(railmlpath[0])
         root = tree.getroot()
         railnsURI=root.tag.split('}')[0].strip('{')
         self.updateNs()
@@ -338,7 +341,9 @@ class RailML:
         railmlpath = QFileDialog.getOpenFileName(self.dockwidget, "Select RailML file","", "RailML files (*.railml *.xml)")
         if railmlpath != "":
             self.dockwidget.labelFilename.clear()
-            railmlname=QDir(railmlpath).dirName()
+            print(railmlpath)
+            railmlname=QDir(railmlpath[0]).dirName()
+            print(railmlname)
             self.dockwidget.labelFilename.setText(railmlname)
             self.parse_railml()
 
@@ -363,7 +368,7 @@ class RailML:
 
             # show the dockwidget
             # TODO: fix to allow choice of dock location
-            self.iface.addDockWidget(Qt.RightDockWidgetArea, self.dockwidget)
+            self.iface.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dockwidget)
             self.dockwidget.show()
             
             global railmlpath
